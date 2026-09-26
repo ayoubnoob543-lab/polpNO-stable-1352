@@ -8,6 +8,7 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - Aborta explícitamente si falta un recurso, está truncado o el payload no tiene el byte de entrada esperado.
 - Mantiene los reintentos automáticos únicamente en la fase de lectura segura.
 - Limita el parámetro `retry` a 0–32 para evitar bucles accidentales.
+- Permite entre 4 y 12 intentos del primitive mediante `attempts`, con 8 por defecto.
 - Elimina la fuente externa del panel para reducir esperas y tráfico durante el exploit.
 
 ## Límite importante
@@ -20,6 +21,12 @@ La URL publicada debe servirse desde un host HTTPS compatible. Para más reinten
 
 ```text
 /?retry=20
+```
+
+Para ampliar únicamente los intentos previos a la fase de kernel:
+
+```text
+/?retry=20&attempts=10
 ```
 
 No usar `force=1`, `patch=0` ni `payload=0` en 13.52.

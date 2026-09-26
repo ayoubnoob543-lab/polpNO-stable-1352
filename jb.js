@@ -325,10 +325,11 @@ let allDone = false,
 
     state("running the primitive...", "warn");
     await new Promise((r) => setTimeout(r, 0));
+    const primitiveAttempts = clampInt(params.get("attempts"), 8, 4, 12);
 
     const PRIMITIVE_LOUD = /FAIL|ERROR|THREW|RETRY|ABORT|PASS/i;
     const carrier = await establishPrimitive({
-      maxAttempts: 6,
+      maxAttempts: primitiveAttempts,
       onEvent: (t, d, a) =>
         (PRIMITIVE_LOUD.test(t) ? mark : trace)(
           t,
