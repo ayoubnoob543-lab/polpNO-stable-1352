@@ -157,6 +157,10 @@ let allDone = false,
     const DO_PAYLOAD = params.get("payload") !== "0";
 
     const KEEP_JB = params.get("keepjb") === "1";
+    const clampInt = (value, fallback, min, max) => {
+      const n = Number.parseInt(value, 10);
+      return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+    };
 
     const NEED_K = [
       "k_idt_rsvd",
@@ -215,6 +219,35 @@ let allDone = false,
       )
     )
       return;
+    // Refuse before the primitive if the exact firmware assets are missing or invalid.
+    // A web page cannot catch a kernel panic after kernel writes have started.
+    const preflightAsset = async (name, predicate) => {
+      try {
+        const response = await fetch(name, { cache: "force-cache" });
+        if (!response.ok) return { ok: false, detail: "HTTP " + response.status };
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        return { ok: predicate(bytes), detail: "bytes=" + bytes.length };
+      } catch (e) {
+        return { ok: false, detail: (e && e.message) || String(e) };
+      }
+    };
+    const patchAsset = DO_PATCH
+      ? await preflightAsset(KPATCH_FILE, (b) => b.length >= 32)
+      : { ok: true, detail: "disabled" };
+    const payloadAsset = DO_PAYLOAD
+      ? await preflightAsset(PAYLOAD_FILE, (b) => b.length >= 32 && b[0] === 0xe9)
+      : { ok: true, detail: "disabled" };
+    if (!check("preflight-kpatch", patchAsset.ok, patchAsset.detail)) {
+      state("refused before kernel stage", "bad");
+      mark("SAFE-ABORT", "kpatch asset missing, short, or not cached");
+      return;
+    }
+    if (!check("preflight-payload", payloadAsset.ok, payloadAsset.detail)) {
+      state("refused before kernel stage", "bad");
+      mark("SAFE-ABORT", "payload missing, short, or invalid entry byte");
+      return;
+    }
+    mark("PREFLIGHT-OK", "no kernel writes have started");
     mark("FW-STATUS", off.fw_status || "none");
     mark(
       "FW-KTABLE",
@@ -241,9 +274,7 @@ let allDone = false,
     // A hard KP (a total reclaim miss that faults inside the cancel walk)
     // cannot be caught here and still needs a reboot -- this only recovers
     // the benign, detectable misses.
-    const RETRY_MAX = params.get("retry")
-      ? parseInt(params.get("retry"), 10)
-      : 8;
+    const RETRY_MAX = clampInt(params.get("retry"), 8, 0, 32);
     const RETRY_KEY = "jb1352-read-retry";
     const retryCount = () => {
       try {
