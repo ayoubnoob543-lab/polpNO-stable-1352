@@ -1,0 +1,20 @@
+{
+  "catalog_version": 1,
+  "entries": [
+    {
+      "id": "apollo-save-tool-ps4",
+      "name": "Apollo Save Tool",
+      "type": "homebrew",
+      "format": "pkg",
+      "version": "2.3.2",
+      "content_id": "APOL00004",
+      "url": "https://github.com/bucanero/apollo-ps4/releases/download/v2.3.2/IV0000-APOL00004_00-APOLLO0000000PS4.pkg",
+      "filename": "IV0000-APOL00004_00-APOLLO0000000PS4.pkg",
+      "destination": "/data/pkg/IV0000-APOL00004_00-APOLLO0000000PS4.pkg",
+      "publisher": "bucanero",
+      "source": "https://github.com/bucanero/apollo-ps4/releases",
+      "auto_download": false,
+      "auto_install": false
+    }
+  ]
+}
