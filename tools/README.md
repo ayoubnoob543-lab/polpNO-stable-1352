@@ -1,5 +1,17 @@
 # Herramientas de PC de PulseHost
 
+## Panel local
+
+Arráncalo en el ordenador:
+
+```bash
+python3 tools/pulse-panel.py
+```
+
+Abre `http://127.0.0.1:8787`. Desde el panel puedes probar la conexión, seleccionar un archivo, añadirlo a la cola, ver el progreso/estado y explorar `/data/pkg` u otra ruta FTP.
+
+Para abrirlo desde otro dispositivo de tu red local, usa `--host 0.0.0.0` y entra en `http://IP-DEL-PC:8787`. Hazlo solo en una red de confianza: esta primera versión no incluye autenticación web.
+
 ## Transferencias FTP reanudables
 
 `pulse-transfer.py` conecta con el FTP de GoldHEN (normalmente puerto `2121`) y:

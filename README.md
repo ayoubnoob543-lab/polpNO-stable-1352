@@ -7,6 +7,8 @@ La primera pieza está en [`tools/pulse-transfer.py`](tools/pulse-transfer.py): 
 
 La siguiente capa puede añadir inventario de `/data/pkg`, `/user/app` y `/user/addcont`, verificación de hashes, cola con prioridades y un panel móvil. La instalación de PKG debe seguir siendo una acción explícita del usuario; transferir un archivo no equivale a instalarlo.
 
+El panel local ya está disponible en [`tools/pulse-panel.py`](tools/pulse-panel.py) con interfaz en [`tools/pulse-panel.html`](tools/pulse-panel.html): conexión FTP, cola, subida reanudable y explorador de rutas.
+
 ## Qué cambia
 
 - Preflight de firmware/tabla y de los archivos `patches/1352.bin` y `goldhen.bin` antes de establecer la primitiva.
