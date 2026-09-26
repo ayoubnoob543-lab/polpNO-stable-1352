@@ -5,6 +5,7 @@ import { offsetsFor } from "./ps4_offsets.js";
 
 const outEl = document.getElementById("out");
 const stateEl = document.getElementById("state");
+const exportEl = document.getElementById("export-log");
 const lines = [];
 let passCount = 0,
   failCount = 0;
@@ -107,6 +108,23 @@ function check(name, ok, detail) {
   }
   return ok;
 }
+function exportLog() {
+  const text = lines.join("\n") + "\n";
+  try {
+    localStorage.setItem("polpNO:last-log", text);
+  } catch (e) {}
+  try {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "polpNO-13.52-" + new Date().toISOString().replace(/[:.]/g, "-") + ".txt";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (e) {
+    mark("LOG-SAVED-LOCAL", "export unavailable; copied to local storage");
+  }
+}
+if (exportEl) exportEl.addEventListener("click", exportLog);
 
 const SYS = {
   getpid: 20,

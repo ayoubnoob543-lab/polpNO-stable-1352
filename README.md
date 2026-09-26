@@ -71,6 +71,16 @@ Si se bloquea o empeoran los resultados, vuelve inmediatamente a `profile=stable
 
 El autodiagnóstico puede rechazar una caché incompleta o un binario cambiado, pero no puede predecir el resultado de una carrera del kernel ni garantizar que un panic sea recuperable.
 
+## Logs
+
+Para generar un log local completo usa:
+
+```text
+?profile=stable&log=1&retry=0&attempts=8&verify=1
+```
+
+Al terminar aparecerá **Guardar log**. Descarga el `.txt` y súbelo al chat o al repositorio privado manualmente. El host también guarda el último log en `localStorage` como `polpNO:last-log`; no envía datos automáticamente a GitHub.
+
 La telemetría queda desactivada en el modo normal. Solo actívala para depurar con:
 
 ```text

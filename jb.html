@@ -202,6 +202,17 @@
         overflow-y: auto;
         color: var(--color-text);
       }
+      #export-log {
+        display: none;
+        margin: 12px 0;
+        padding: 8px 12px;
+        font: 12px monospace;
+        color: var(--color-text);
+        background: #111923;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+      }
+      body.log #export-log { display: block; }
 
       .ok { color: var(--color-ok); }
       .bad { color: var(--color-fail); }
@@ -245,6 +256,7 @@
     
     <div id="wrap">
       <div id="state"></div>
+      <button id="export-log" type="button">Guardar log</button>
       <div id="out"></div>
     </div>
 
