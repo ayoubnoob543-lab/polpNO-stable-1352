@@ -57,3 +57,25 @@ python3 tools/pulse-transfer.py \
 Si se corta la conexión, vuelve a ejecutar el mismo comando: continuará desde el tamaño remoto cuando el FTP anuncie `REST`; si el servidor no soporta reanudación, avisará y empezará de cero para no corromper el archivo.
 
 El helper se ejecuta en el PC. La página de la PS4 no habla FTP directamente porque el navegador no expone un cliente FTP; el panel web podrá controlar este helper más adelante mediante una API local.
+
+## Download Hub tipo Apollo
+
+Para descargar cualquier archivo desde una URL (`.zip`, `.7z`, `.json`, `.pkg`, etc.) con reanudación HTTP:
+
+```bash
+python3 tools/pulse-download.py \
+  https://servidor.example/archivo.zip \
+  --output ./downloads/archivo.zip
+```
+
+También puede descargarlo y enviarlo automáticamente a la PS4 al terminar:
+
+```bash
+python3 tools/pulse-download.py \
+  https://servidor.example/archivo.pkg \
+  --output ./downloads/archivo.pkg \
+  --ftp-host 192.168.1.50 \
+  --remote /data/pkg/archivo.pkg
+```
+
+Si se corta la conexión, repite el mismo comando y continuará mediante HTTP `Range`. `--sha256 HASH` añade comprobación de integridad. El estado se guarda en `~/.pulsehost-downloads.json`.

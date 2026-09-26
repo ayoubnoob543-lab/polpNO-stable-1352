@@ -23,6 +23,10 @@ spec = importlib.util.spec_from_file_location("pulse_transfer", TRANSFER_PATH)
 transfer = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(transfer)
+download_spec = importlib.util.spec_from_file_location("pulse_download", ROOT / "pulse-download.py")
+download = importlib.util.module_from_spec(download_spec)
+assert download_spec.loader is not None
+download_spec.loader.exec_module(download)
 
 app = Flask(__name__)
 JOBS: list[dict] = []
@@ -138,6 +142,30 @@ def queue_api():
     JOB_QUEUE.put(job)
     public = {k: v for k, v in job.items() if k not in {"password", "local"}}
     return jsonify({"ok": True, "job": public})
+
+
+@app.post("/api/download")
+def download_api():
+    data = request.get_json(force=True)
+    url = str(data.get("url", "")).strip()
+    output = str(data.get("output", "")).strip()
+    if not url or not output:
+        return jsonify({"ok": False, "error": "url and output required"}), 400
+    job = {"id": str(time.time_ns()), "name": Path(output).name, "local": output,
+           "remote": data.get("remote", ""), "status": "downloading", "kind": "http"}
+    with LOCK: JOBS.append(job)
+
+    def run() -> None:
+        try:
+            path = download.download(url, Path(output).expanduser(), download.load(download.STATE), int(data.get("retries", 8)))
+            if data.get("ftp_host") and data.get("remote"):
+                cfg = type("Args", (), {"host": data["ftp_host"], "port": int(data.get("ftp_port", 2121)), "user": "anonymous", "password": "", "timeout": 15.0, "retries": 8, "state": Path.home()/".pulsehost-transfers.json", "block_size": 4*1024*1024, "hash": False})()
+                transfer.transfer_one(cfg, path, data["remote"], transfer.load_state(cfg.state))
+            with LOCK: job["status"] = "complete"
+        except Exception as exc:
+            with LOCK: job.update(status="error", error=str(exc))
+    threading.Thread(target=run, daemon=True, name="pulse-http-download").start()
+    return jsonify({"ok": True, "job": {k: v for k, v in job.items() if k != "local"}})
 
 
 if __name__ == "__main__":

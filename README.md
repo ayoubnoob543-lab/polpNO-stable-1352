@@ -9,6 +9,8 @@ La siguiente capa puede añadir inventario de `/data/pkg`, `/user/app` y `/user/
 
 El panel local ya está disponible en [`tools/pulse-panel.py`](tools/pulse-panel.py) con interfaz en [`tools/pulse-panel.html`](tools/pulse-panel.html): conexión FTP, cola, subida reanudable y explorador de rutas.
 
+El módulo [`tools/pulse-download.py`](tools/pulse-download.py) añade descargas automáticas desde URL para cualquier extensión, reanudación HTTP, comprobación SHA-256 opcional y envío posterior a la PS4.
+
 ## Qué cambia
 
 - Preflight de firmware/tabla y de los archivos `patches/1352.bin` y `goldhen.bin` antes de establecer la primitiva.
