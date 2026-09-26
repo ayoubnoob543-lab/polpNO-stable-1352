@@ -3394,6 +3394,18 @@ let allDone = false,
         failCount +
         (allDone ? "" : "  INCOMPLETE"),
     );
+    if (payloadRunning) {
+      try {
+        localStorage.setItem(
+          "polpNO:last-good",
+          JSON.stringify({
+            retry: clampInt(params.get("retry"), 8, 0, 32),
+            attempts: clampInt(params.get("attempts"), 8, 4, 12),
+          }),
+        );
+        mark("LAST-GOOD-SAVED", "retry/attempts saved locally");
+      } catch (eSave) {}
+    }
     try {
       finishUI(payloadRunning);
     } catch (eUI) {}

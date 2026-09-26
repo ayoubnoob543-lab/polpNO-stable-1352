@@ -62,7 +62,18 @@
     print("firmware: " + (key || "unknown"));
     print("supported: " + (supported ? "yes" : "no"), supported ? "ok" : "bad");
 
-    var target = "jb.html" + location.search;
+    var savedQuery = "";
+    if (!location.search) {
+        try {
+            var last = JSON.parse(localStorage.getItem("polpNO:last-good") || "null");
+            if (last && Number.isFinite(last.retry) && Number.isFinite(last.attempts)) {
+                savedQuery = "?retry=" + Math.max(0, Math.min(32, last.retry)) +
+                    "&attempts=" + Math.max(4, Math.min(12, last.attempts));
+                print("last known-good settings loaded", "ok");
+            }
+        } catch (e) {}
+    }
+    var target = "jb.html" + (location.search || savedQuery);
 
     function go() {
         print("loading exploit...", "warn");
