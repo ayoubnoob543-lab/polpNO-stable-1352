@@ -1,6 +1,11 @@
 # PulseHost 13.52
-
 Host privado de estabilidad para PS4 13.52, basado en el trabajo upstream de `mansoor0x/polpNO` y rebrandeado como PulseHost.
+
+## Gestor de archivos y PKG
+
+La primera pieza está en [`tools/pulse-transfer.py`](tools/pulse-transfer.py): es un helper para PC que usa el FTP de GoldHEN en el puerto 2121, reanuda transferencias con `REST`/`STOR`, guarda estado local y procesa colas. La página de la PS4 no puede hablar FTP directamente; el panel web debe comunicarse con este helper local.
+
+La siguiente capa puede añadir inventario de `/data/pkg`, `/user/app` y `/user/addcont`, verificación de hashes, cola con prioridades y un panel móvil. La instalación de PKG debe seguir siendo una acción explícita del usuario; transferir un archivo no equivale a instalarlo.
 
 ## Qué cambia
 
