@@ -1,9 +1,9 @@
-<!-- PulseHost 13.52 — private stability host -->
+<!-- © 2026 mansoor0x — PS4 Exploit -->
 <html manifest="cache.appcache">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>PulseHost 13.52</title>
+    <title>mansoor0x</title>
     <style>
         body {
             background: #ffffff;
@@ -26,8 +26,8 @@
     </script>
 </head>
 <body>
-    <strong>PulseHost 13.52</strong> · fast / cached / diagnostic<br>
-    Private stability build<br>
+    mansoor0x · PS4 Exploit<br>
+    © 2026 mansoor0x<br>
     <br>
     <pre id="console"></pre>
 </body>
@@ -61,24 +61,8 @@
 
     print("firmware: " + (key || "unknown"));
     print("supported: " + (supported ? "yes" : "no"), supported ? "ok" : "bad");
-    try {
-        if (localStorage.getItem("polpNO:run-state") === "active") {
-            print("previous run did not finish — reboot before retrying", "warn");
-        }
-    } catch (e) {}
 
-    var savedQuery = "";
-    if (!location.search) {
-        try {
-            var last = JSON.parse(localStorage.getItem("polpNO:last-good") || "null");
-            if (last && Number.isFinite(last.retry) && Number.isFinite(last.attempts)) {
-                savedQuery = "?retry=" + Math.max(0, Math.min(32, last.retry)) +
-                    "&attempts=" + Math.max(4, Math.min(12, last.attempts));
-                print("last known-good settings loaded", "ok");
-            }
-        } catch (e) {}
-    }
-    var target = "jb.html" + (location.search || savedQuery);
+    var target = "jb.html" + location.search;
 
     function go() {
         print("loading exploit...", "warn");
@@ -125,7 +109,7 @@
         }, false);
         ac.addEventListener("cached", function () {
             print("cached for offline use", "ok");
-            setTimeout(go, 150);
+            waitForTap("CACHED — tap / press X to run", go);
         }, false);
         ac.addEventListener("updateready", function () {
             try { ac.swapCache(); } catch (e) {}

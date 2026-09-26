@@ -117,3 +117,7 @@ Parámetros seguros para comparar:
 ```
 
 La telemetría de red se deja apagada para no añadir lag. El log local (`log=1`) no necesita conexión.
+
+## Restauración de estabilidad
+
+La versión publicada usa `core.js`, `jb.js`, `mem.js`, `index.html`, `cache.html` y `cache.appcache` restaurados desde `mansoor0x/polpNO`. No se aplican los perfiles rápidos ni cambios experimentales de timing. `goldhen.bin` y `patches/1352.bin` mantienen sus hashes upstream.

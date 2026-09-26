@@ -1,6 +1,5 @@
 let DRAIN_COUNT = 512;
-const FAST_PROFILE = new URLSearchParams(location.search).get("profile") === "fast";
-const AUTO_RETRY_DELAY_MS = FAST_PROFILE ? 25 : 50;
+const AUTO_RETRY_DELAY_MS = 50;
 
 const K = 2;
 const DUPLICATE_INDEX = 2;
@@ -23,8 +22,8 @@ const CARRIER_SLOTS = (function () {
   return 12000000;
 })();
 const CARRIER_BYTES = CARRIER_SLOTS * 8;
-const CAPTURE_DELAY_MS = FAST_PROFILE ? 20 : 50;
-const COMPOSE_DELAY_MS = FAST_PROFILE ? 50 : 100;
+const CAPTURE_DELAY_MS = 50;
+const COMPOSE_DELAY_MS = 100;
 
 const symbolToString = Symbol.prototype.toString;
 
@@ -458,7 +457,7 @@ function scheduleSafeRetry(reason) {
       attemptNumber = nextAttempt;
       startAttempt();
     },
-    Math.max(AUTO_RETRY_DELAY_MS, FAST_PROFILE ? 300 : 750),
+    Math.max(AUTO_RETRY_DELAY_MS, 750),
   );
 }
 

