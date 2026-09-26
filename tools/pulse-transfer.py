@@ -10,20 +10,21 @@ import argparse
 import hashlib
 import json
 import os
+import socket
 import posixpath
 import sys
 import time
 from ftplib import FTP, all_errors
 from pathlib import Path
 
-CHUNK = 1024 * 1024
+DEFAULT_BLOCK = 4 * 1024 * 1024
 DEFAULT_STATE = Path.home() / ".pulsehost-transfers.json"
 
 
-def sha256_file(path: Path) -> str:
+def sha256_file(path: Path, block_size: int) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as fh:
-        for block in iter(lambda: fh.read(CHUNK), b""):
+        for block in iter(lambda: fh.read(block_size), b""):
             digest.update(block)
     return digest.hexdigest()
 
@@ -63,6 +64,9 @@ def connect(host: str, port: int, user: str, password: str, timeout: float) -> F
     ftp.connect(host, port, timeout=timeout)
     ftp.login(user, password)
     ftp.voidcmd("TYPE I")
+    if ftp.sock is not None:
+        ftp.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024 * 1024)
+        ftp.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     return ftp
 
 
@@ -74,8 +78,11 @@ def transfer_one(args, local: Path, remote: str, state: dict) -> None:
     entry = state.setdefault("jobs", {}).setdefault(key, {})
     digest = entry.get("sha256")
     if not digest or entry.get("size") != total:
-        print(f"[hash] {local.name}")
-        digest = sha256_file(local)
+        if args.hash:
+            print(f"[hash] {local.name}")
+            digest = sha256_file(local, args.block_size)
+        else:
+            digest = "deferred"
         entry.update({"size": total, "sha256": digest, "remote": remote, "completed": 0})
         save_state(args.state, state)
 
@@ -109,12 +116,18 @@ def transfer_one(args, local: Path, remote: str, state: dict) -> None:
                     nonlocal sent
                     sent += len(block)
                     entry["completed"] = sent
-                    if sent == total or sent % (16 * CHUNK) < len(block):
+                    if sent == total or sent % (64 * args.block_size) < len(block):
                         save_state(args.state, state)
                     pct = (sent / total * 100) if total else 100
                     print(f"\r{pct:6.2f}% {sent}/{total} bytes", end="", flush=True)
 
-                ftp.storbinary(f"STOR {remote}", fh, blocksize=CHUNK, callback=callback, rest=offset or None)
+                ftp.storbinary(
+                    f"STOR {remote}",
+                    fh,
+                    blocksize=args.block_size,
+                    callback=callback,
+                    rest=offset or None,
+                )
             print()
             final = remote_size(ftp, remote)
             if final != total:
@@ -163,6 +176,17 @@ def main() -> int:
     parser.add_argument("--state", type=Path, default=DEFAULT_STATE)
     parser.add_argument("--retries", type=int, default=8)
     parser.add_argument("--timeout", type=float, default=15)
+    parser.add_argument(
+        "--block-size",
+        type=int,
+        default=DEFAULT_BLOCK,
+        help="FTP read block in bytes (default: 4194304)",
+    )
+    parser.add_argument(
+        "--hash",
+        action="store_true",
+        help="hash the local file before transfer; slower startup, stronger precheck",
+    )
     args = parser.parse_args()
     if bool(args.file) == bool(args.manifest):
         parser.error("use exactly one of --file/--manifest")

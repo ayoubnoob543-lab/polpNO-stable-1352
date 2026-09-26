@@ -10,6 +10,8 @@
 - Reintenta tras una desconexión.
 - Verifica el tamaño remoto al terminar.
 - Procesa una cola mediante un manifiesto.
+- Empieza a transferir inmediatamente por defecto, sin calcular el hash completo antes.
+- Usa bloques de 4 MiB y un búfer TCP mayor para reducir sobrecarga.
 
 ### Un archivo
 
@@ -19,6 +21,8 @@ python3 tools/pulse-transfer.py \
   --file ./juego.pkg \
   --remote /data/pkg/juego.pkg
 ```
+
+Para priorizar una comprobación SHA-256 antes de empezar, añade `--hash`; ralentiza el inicio. Si la red concreta rinde mejor con otro tamaño, prueba `--block-size 2097152` o `--block-size 8388608`.
 
 ### Cola
 
