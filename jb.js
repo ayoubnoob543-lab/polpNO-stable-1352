@@ -3132,12 +3132,32 @@ let allDone = false,
                   p.write8(entry.add32(o), new int64(lo >>> 0, hi >>> 0));
                 }
                 let bad = -1;
-                for (let o = 0; o < payloadBlob.length && bad < 0; o++)
-                  if (p.read1(entry.add32(o)) !== payloadBlob[o]) bad = o;
+                const fullPayloadVerify =
+                  PROFILE !== "fast" || params.get("verify") === "1";
+                if (fullPayloadVerify) {
+                  for (let o = 0; o < payloadBlob.length && bad < 0; o++)
+                    if (p.read1(entry.add32(o)) !== payloadBlob[o]) bad = o;
+                } else {
+                  const samples = new Set();
+                  for (let o = 0; o < Math.min(64, payloadBlob.length); o++)
+                    samples.add(o);
+                  for (
+                    let o = Math.max(0, payloadBlob.length - 64);
+                    o < payloadBlob.length;
+                    o++
+                  )
+                    samples.add(o);
+                  for (const o of samples)
+                    if (p.read1(entry.add32(o)) !== payloadBlob[o]) {
+                      bad = o;
+                      break;
+                    }
+                }
                 mark(
                   "PAYLOAD-COPY",
                   "bytes=" +
                     payloadBlob.length +
+                    " verify=" + (fullPayloadVerify ? "full" : "sampled") +
                     (bad < 0 ? " ok" : " MISMATCH@0x" + bad.toString(16)),
                 );
                 const slot = webkitBase.add32(off.wk___imp_pthread_create);

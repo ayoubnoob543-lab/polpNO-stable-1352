@@ -19,6 +19,7 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - `fast` también reduce los retardos de composición, reintento y aparcado del worker; puede ser menos tolerante al timing que `stable`.
 - En `fast` los retardos internos de captura/composición bajan de 50/100 ms a 20/50 ms y el reintento seguro mínimo baja de 750 ms a 300 ms.
 - Verifica con SHA-256 que `1352.bin` y `goldhen.bin` son exactamente los recursos probados antes de iniciar.
+- En `fast`, verifica muestras al copiar GoldHEN en vez de releer los 293 KB byte a byte; `stable` mantiene la verificación completa.
 
 ## Límite importante
 
@@ -58,6 +59,12 @@ Si quieres que cargue y ejecute con la menor espera:
 
 ```text
 ?profile=fast&retry=2&attempts=6
+```
+
+Si quieres el perfil rápido pero con verificación completa del payload:
+
+```text
+?profile=fast&verify=1&retry=2&attempts=6
 ```
 
 Si se bloquea o empeoran los resultados, vuelve inmediatamente a `profile=stable`.
