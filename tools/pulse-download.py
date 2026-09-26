@@ -9,6 +9,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from typing import Callable
 from pathlib import Path
 
 BLOCK = 4 * 1024 * 1024
@@ -33,7 +34,10 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def download(url: str, out: Path, state: dict, retries: int = 8) -> Path:
+def download(url: str, out: Path, state: dict, retries: int = 8,
+             should_pause: Callable[[], bool] | None = None,
+             should_cancel: Callable[[], bool] | None = None,
+             on_progress: Callable[[int, int], None] | None = None) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     key = url
     entry = state.setdefault(key, {})
@@ -53,11 +57,17 @@ def download(url: str, out: Path, state: dict, retries: int = 8) -> Path:
                 done = current
                 with out.open(mode) as f:
                     while True:
+                        while should_pause and should_pause():
+                            entry["status"] = "paused"; save(STATE, state); time.sleep(.25)
+                        if should_cancel and should_cancel():
+                            entry["status"] = "cancelled"; save(STATE, state)
+                            return out
                         block = r.read(BLOCK)
                         if not block: break
                         f.write(block); done += len(block)
                         entry.update({"file": str(out), "bytes": done, "total": total, "status": "downloading"})
                         save(STATE, state)
+                        if on_progress: on_progress(done, total)
                         pct = done / total * 100 if total else 0
                         print(f"\r{pct:6.2f}% {done}/{total or '?'} bytes", end="", flush=True)
                 print()

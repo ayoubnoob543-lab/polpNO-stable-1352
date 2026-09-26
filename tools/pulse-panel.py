@@ -9,9 +9,12 @@ import importlib.util
 import os
 import posixpath
 import queue
+import shutil
+import subprocess
 import tempfile
 import threading
 import time
+import zipfile
 from ftplib import FTP, all_errors
 from pathlib import Path
 
@@ -32,6 +35,21 @@ app = Flask(__name__)
 JOBS: list[dict] = []
 JOB_QUEUE: queue.Queue[dict] = queue.Queue()
 LOCK = threading.Lock()
+
+
+def category(name: str) -> str:
+    ext = Path(name).suffix.lower()
+    return {".pkg": "PKG", ".zip": "ZIP", ".7z": "7Z", ".json": "JSON", ".bin": "PAYLOAD", ".sav": "SAVE"}.get(ext, "OTHER")
+
+
+def safe_extract_zip(source: Path, target: Path) -> None:
+    target = target.resolve(); target.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(source) as archive:
+        for member in archive.infolist():
+            dest = (target / member.filename).resolve()
+            if dest != target and target not in dest.parents:
+                raise ValueError("unsafe archive path")
+        archive.extractall(target)
 
 
 def ftp_from(data: dict) -> FTP:
@@ -137,7 +155,7 @@ def queue_api():
     job = {"id": str(time.time_ns()), "name": safe_name, "local": str(local), "remote": remote,
            "host": host, "port": int(request.form.get("port", 2121)),
            "user": request.form.get("user", "anonymous"), "password": request.form.get("password", ""),
-           "hash": request.form.get("hash") == "1", "status": "queued"}
+           "hash": request.form.get("hash") == "1", "category": category(safe_name), "status": "queued"}
     with LOCK: JOBS.append(job)
     JOB_QUEUE.put(job)
     public = {k: v for k, v in job.items() if k not in {"password", "local"}}
@@ -152,12 +170,23 @@ def download_api():
     if not url or not output:
         return jsonify({"ok": False, "error": "url and output required"}), 400
     job = {"id": str(time.time_ns()), "name": Path(output).name, "local": output,
-           "remote": data.get("remote", ""), "status": "downloading", "kind": "http"}
+           "remote": data.get("remote", ""), "category": category(output), "status": "downloading", "kind": "http"}
     with LOCK: JOBS.append(job)
 
     def run() -> None:
         try:
-            path = download.download(url, Path(output).expanduser(), download.load(download.STATE), int(data.get("retries", 8)))
+            def progress(done, total):
+                with LOCK:
+                    job.update(bytes=done, total=total, progress=(done / total * 100 if total else 0))
+            path = download.download(
+                url, Path(output).expanduser(), download.load(download.STATE),
+                int(data.get("retries", 8)),
+                should_pause=lambda: job.get("status") == "paused",
+                should_cancel=lambda: job.get("status") == "cancelled",
+                on_progress=progress,
+            )
+            if job.get("status") == "cancelled":
+                return
             if data.get("ftp_host") and data.get("remote"):
                 cfg = type("Args", (), {"host": data["ftp_host"], "port": int(data.get("ftp_port", 2121)), "user": "anonymous", "password": "", "timeout": 15.0, "retries": 8, "state": Path.home()/".pulsehost-transfers.json", "block_size": 4*1024*1024, "hash": False})()
                 transfer.transfer_one(cfg, path, data["remote"], transfer.load_state(cfg.state))
@@ -166,6 +195,45 @@ def download_api():
             with LOCK: job.update(status="error", error=str(exc))
     threading.Thread(target=run, daemon=True, name="pulse-http-download").start()
     return jsonify({"ok": True, "job": {k: v for k, v in job.items() if k != "local"}})
+
+
+@app.post("/api/jobs/<job_id>/<action>")
+def job_action(job_id: str, action: str):
+    if action not in {"pause", "resume", "cancel"}:
+        return jsonify({"ok": False, "error": "unknown action"}), 400
+    with LOCK:
+        job = next((x for x in JOBS if x["id"] == job_id), None)
+        if not job:
+            return jsonify({"ok": False, "error": "job not found"}), 404
+        if action == "pause" and job.get("kind") == "http": job["status"] = "paused"
+        elif action == "resume" and job.get("kind") == "http": job["status"] = "running"
+        elif action == "cancel": job["status"] = "cancelled"
+        else: return jsonify({"ok": False, "error": "only HTTP jobs support pause/resume"}), 400
+        return jsonify({"ok": True, "status": job["status"]})
+
+
+@app.post("/api/local")
+def local_action():
+    data = request.get_json(force=True)
+    path = Path(str(data.get("path", ""))).expanduser().resolve()
+    action = data.get("action")
+    if not path.exists(): return jsonify({"ok": False, "error": "file not found"}), 404
+    try:
+        if action == "delete":
+            if path.is_dir(): shutil.rmtree(path)
+            else: path.unlink()
+        elif action == "move":
+            dest = Path(str(data.get("destination", ""))).expanduser().resolve()
+            dest.parent.mkdir(parents=True, exist_ok=True); shutil.move(str(path), str(dest))
+        elif action == "extract":
+            dest = Path(str(data.get("destination", path.with_suffix("_extracted")))).expanduser().resolve()
+            if path.suffix.lower() == ".zip": safe_extract_zip(path, dest)
+            elif path.suffix.lower() == ".7z": subprocess.run(["7z", "x", "-y", f"-o{dest}", str(path)], check=True, timeout=900)
+            else: return jsonify({"ok": False, "error": "only zip/7z can be extracted"}), 400
+        else: return jsonify({"ok": False, "error": "unknown local action"}), 400
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
 
 
 if __name__ == "__main__":
