@@ -13,6 +13,7 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - Desactiva las peticiones de telemetría y las animaciones pesadas por defecto para reducir el lag del navegador.
 - Guarda localmente `retry` y `attempts` cuando el payload termina bien y los reutiliza al siguiente arranque del host.
 - Precarga `1352.bin` y `goldhen.bin` en paralelo y reutiliza esos bytes, evitando dos descargas durante una ejecución.
+- No usa URLs con `?v=` para evitar entradas duplicadas en AppCache y acelerar el arranque offline.
 - Marca una ejecución activa y avisa si la anterior no terminó; en ese caso hay que reiniciar antes de reintentar.
 - Añade perfiles `stable` (por defecto) y `fast`; `fast` reduce esperas solo en fases seguras.
 

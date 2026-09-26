@@ -125,7 +125,7 @@
         }, false);
         ac.addEventListener("cached", function () {
             print("cached for offline use", "ok");
-            waitForTap("CACHED — tap / press X to run", go);
+            setTimeout(go, 150);
         }, false);
         ac.addEventListener("updateready", function () {
             try { ac.swapCache(); } catch (e) {}

@@ -33,10 +33,10 @@ function DLProgress(e) {
 function DisplayCacheProgress() {
     setTimeout(function () {
         msgs.innerHTML = "mansoor0x &middot; Cache OK";
-    }, 2000);
+    }, 250);
     setTimeout(function () {
         location.reload();
-    }, 3000);
+    }, 650);
 }
 
 window.applicationCache.addEventListener("progress",    DLProgress,           false);

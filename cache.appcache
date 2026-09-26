@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# rev 20260926-stable-fast-v16
+# rev 20260926-fast-cache-v17
 
 index.html
 cache.html
@@ -19,11 +19,6 @@ patches/1300.bin
 patches/1302.bin
 patches/1350.bin
 patches/1352.bin
-index.html?v=15
-cache.html?v=15
-jb.html?v=15
-core.js?v=15
-jb.js?v=15
 
 NETWORK:
 *
