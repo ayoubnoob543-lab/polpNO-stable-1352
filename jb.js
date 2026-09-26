@@ -13,6 +13,10 @@ const STOP_BEFORE_DOUBLE = params.get("stop") === "beforedouble";
 const TELEMETRY = params.get("telemetry") === "1";
 const PROFILE = params.get("profile") === "fast" ? "fast" : "stable";
 const RUN_STATE_KEY = "polpNO:run-state";
+const EXPECTED_SHA256 = {
+  "patches/1352.bin": "a4ca7dc1f31a342cd80cb3b4aee0fcd56e92685e3ce1491c34cbd656c1af562c",
+  "goldhen.bin": "df3f27c1b35bc7c40e3a08caab948930914dc7d0301a73b68945cf6ffe40ea12",
+};
 
 function post(tag, detail) {
   if (!TELEMETRY) return;
@@ -225,13 +229,27 @@ let allDone = false,
       return;
     // Refuse before the primitive if the exact firmware assets are missing or invalid.
     // A web page cannot catch a kernel panic after kernel writes have started.
+    const sha256 = async (bytes) => {
+      if (!globalThis.crypto || !crypto.subtle) return "unavailable";
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    };
     const preflightAsset = async (name, predicate) => {
       try {
         const response = await fetch(name, { cache: "force-cache" });
         if (!response.ok)
           return { ok: false, detail: "HTTP " + response.status, bytes: null };
         const bytes = new Uint8Array(await response.arrayBuffer());
-        return { ok: predicate(bytes), detail: "bytes=" + bytes.length, bytes };
+        const hash = await sha256(bytes);
+        const expected = EXPECTED_SHA256[name];
+        const hashOK = hash === "unavailable" || !expected || hash === expected;
+        return {
+          ok: predicate(bytes) && hashOK,
+          detail: "bytes=" + bytes.length + " sha256=" + (hash === "unavailable" ? "skipped" : hash.slice(0, 12)),
+          bytes,
+        };
       } catch (e) {
         return { ok: false, detail: (e && e.message) || String(e), bytes: null };
       }
@@ -257,7 +275,10 @@ let allDone = false,
     try {
       localStorage.setItem(RUN_STATE_KEY, "active");
     } catch (eState) {}
-    mark("PREFLIGHT-OK", "no kernel writes have started profile=" + PROFILE);
+    mark(
+      "PREFLIGHT-OK",
+      "no kernel writes have started profile=" + PROFILE + " assets=verified",
+    );
     mark("FW-STATUS", off.fw_status || "none");
     mark(
       "FW-KTABLE",

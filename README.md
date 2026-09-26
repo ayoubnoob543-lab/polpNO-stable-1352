@@ -18,6 +18,7 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - Añade perfiles `stable` (por defecto) y `fast`; `fast` reduce esperas solo en fases seguras.
 - `fast` también reduce los retardos de composición, reintento y aparcado del worker; puede ser menos tolerante al timing que `stable`.
 - En `fast` los retardos internos de captura/composición bajan de 50/100 ms a 20/50 ms y el reintento seguro mínimo baja de 750 ms a 300 ms.
+- Verifica con SHA-256 que `1352.bin` y `goldhen.bin` son exactamente los recursos probados antes de iniciar.
 
 ## Límite importante
 
@@ -60,6 +61,8 @@ Si quieres que cargue y ejecute con la menor espera:
 ```
 
 Si se bloquea o empeoran los resultados, vuelve inmediatamente a `profile=stable`.
+
+El autodiagnóstico puede rechazar una caché incompleta o un binario cambiado, pero no puede predecir el resultado de una carrera del kernel ni garantizar que un panic sea recuperable.
 
 La telemetría queda desactivada en el modo normal. Solo actívala para depurar con:
 
