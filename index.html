@@ -61,6 +61,11 @@
 
     print("firmware: " + (key || "unknown"));
     print("supported: " + (supported ? "yes" : "no"), supported ? "ok" : "bad");
+    try {
+        if (localStorage.getItem("polpNO:run-state") === "active") {
+            print("previous run did not finish — reboot before retrying", "warn");
+        }
+    } catch (e) {}
 
     var savedQuery = "";
     if (!location.search) {

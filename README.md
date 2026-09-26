@@ -12,6 +12,9 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - Elimina la fuente externa del panel para reducir esperas y tráfico durante el exploit.
 - Desactiva las peticiones de telemetría y las animaciones pesadas por defecto para reducir el lag del navegador.
 - Guarda localmente `retry` y `attempts` cuando el payload termina bien y los reutiliza al siguiente arranque del host.
+- Precarga `1352.bin` y `goldhen.bin` en paralelo y reutiliza esos bytes, evitando dos descargas durante una ejecución.
+- Marca una ejecución activa y avisa si la anterior no terminó; en ese caso hay que reiniciar antes de reintentar.
+- Añade perfiles `stable` (por defecto) y `fast`; `fast` reduce esperas solo en fases seguras.
 
 ## Límite importante
 
@@ -32,6 +35,20 @@ Para ampliar únicamente los intentos previos a la fase de kernel:
 ```
 
 No usar `force=1`, `patch=0` ni `payload=0` en 13.52.
+
+El perfil normal es el estable:
+
+```text
+?profile=stable&retry=12&attempts=8
+```
+
+Para comparar velocidad sin tocar los offsets ni el kpatch:
+
+```text
+?profile=fast&retry=4&attempts=6
+```
+
+`fast` no es el modo recomendado si la prioridad es evitar kernel panic.
 
 La telemetría queda desactivada en el modo normal. Solo actívala para depurar con:
 

