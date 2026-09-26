@@ -1227,7 +1227,9 @@ let allDone = false,
         if (prev) prev.call(this, e);
       };
       w1.worker.postMessage({ id: -1, name: "spin", args: [] });
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) =>
+        setTimeout(r, PROFILE === "fast" ? 60 : 250),
+      );
       mark("PR-PARK", "w1 spin posted parkfail=" + (parkFail || "none"));
     }
     if (

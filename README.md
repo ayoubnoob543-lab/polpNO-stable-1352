@@ -16,6 +16,8 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - No usa URLs con `?v=` para evitar entradas duplicadas en AppCache y acelerar el arranque offline.
 - Marca una ejecución activa y avisa si la anterior no terminó; en ese caso hay que reiniciar antes de reintentar.
 - Añade perfiles `stable` (por defecto) y `fast`; `fast` reduce esperas solo en fases seguras.
+- `fast` también reduce los retardos de composición, reintento y aparcado del worker; puede ser menos tolerante al timing que `stable`.
+- En `fast` los retardos internos de captura/composición bajan de 50/100 ms a 20/50 ms y el reintento seguro mínimo baja de 750 ms a 300 ms.
 
 ## Límite importante
 
@@ -50,6 +52,14 @@ Para comparar velocidad sin tocar los offsets ni el kpatch:
 ```
 
 `fast` no es el modo recomendado si la prioridad es evitar kernel panic.
+
+Si quieres que cargue y ejecute con la menor espera:
+
+```text
+?profile=fast&retry=2&attempts=6
+```
+
+Si se bloquea o empeoran los resultados, vuelve inmediatamente a `profile=stable`.
 
 La telemetría queda desactivada en el modo normal. Solo actívala para depurar con:
 
