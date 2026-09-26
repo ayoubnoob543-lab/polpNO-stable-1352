@@ -10,8 +10,10 @@ let passCount = 0,
   failCount = 0;
 const params = new URLSearchParams(location.search);
 const STOP_BEFORE_DOUBLE = params.get("stop") === "beforedouble";
+const TELEMETRY = params.get("telemetry") === "1";
 
 function post(tag, detail) {
+  if (!TELEMETRY) return;
   try {
     const x = new XMLHttpRequest();
     x.open("POST", "/t", true);

@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# rev 20260926-stable-preflight-v12
+# rev 20260926-lite-v13
 
 index.html
 cache.html
@@ -19,8 +19,8 @@ patches/1300.bin
 patches/1302.bin
 patches/1350.bin
 patches/1352.bin
-core.js?v=12
-jb.js?v=12
+core.js?v=13
+jb.js?v=13
 
 NETWORK:
 *

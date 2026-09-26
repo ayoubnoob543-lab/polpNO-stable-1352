@@ -10,6 +10,7 @@ Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
 - Limita el parámetro `retry` a 0–32 para evitar bucles accidentales.
 - Permite entre 4 y 12 intentos del primitive mediante `attempts`, con 8 por defecto.
 - Elimina la fuente externa del panel para reducir esperas y tráfico durante el exploit.
+- Desactiva las peticiones de telemetría y las animaciones pesadas por defecto para reducir el lag del navegador.
 
 ## Límite importante
 
@@ -30,3 +31,9 @@ Para ampliar únicamente los intentos previos a la fase de kernel:
 ```
 
 No usar `force=1`, `patch=0` ni `payload=0` en 13.52.
+
+La telemetría queda desactivada en el modo normal. Solo actívala para depurar con:
+
+```text
+/?telemetry=1&log=1&verbose=1
+```
