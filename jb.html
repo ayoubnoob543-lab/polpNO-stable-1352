@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MANSOOR0X // NVS</title>
+    <title>PulseHost 13.52</title>
     <style>
 
       :root {
@@ -109,6 +109,25 @@
         justify-content: center;
         align-items: center;
       }
+
+      #subtitle {
+        margin-top: -28px;
+        margin-bottom: 28px;
+        color: #8b9bb4;
+        font: 11px monospace;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .badges { display: flex; gap: 6px; margin-top: 28px; }
+      .badge {
+        padding: 4px 7px;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 999px;
+        color: #8b9bb4;
+        font: 9px monospace;
+        letter-spacing: .08em;
+      }
+      .badge.good { color: var(--color-ok); border-color: rgba(0,255,136,.28); }
 
       .pulse {
         position: absolute;
@@ -244,11 +263,16 @@
   <body>
 
     <div id="main-container">
-        <div id="brand">MANSOOR0X</div>
+        <div id="brand">PULSEHOST</div>
+        <div id="subtitle">PS4 13.52 · FAST / CACHED / DIAGNOSTIC</div>
         <div id="visual-indicator">
             <div id="spin"></div>
             <div class="pulse"></div>
             <div class="core"></div>
+        </div>
+        <div class="badges">
+          <span class="badge good">OFFLINE READY</span>
+          <span class="badge">CONTROLLED</span>
         </div>
     </div>
 
@@ -260,7 +284,7 @@
       <div id="out"></div>
     </div>
 
-    <div id="footer">MANSOOR0X // NVS_CORE</div>
+    <div id="footer">PULSEHOST // 13.52</div>
 
     <script type="module">
       import "./jb.js";

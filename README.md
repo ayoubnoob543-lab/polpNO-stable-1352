@@ -1,6 +1,6 @@
-# polpNO-stable-1352
+# PulseHost 13.52
 
-Variante privada de trabajo basada en `mansoor0x/polpNO` para PS4 13.52.
+Host privado de estabilidad para PS4 13.52, basado en el trabajo upstream de `mansoor0x/polpNO` y rebrandeado como PulseHost.
 
 ## Qué cambia
 

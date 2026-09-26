@@ -1,6 +1,6 @@
 <html manifest="cache.appcache">
 <head>
-<title>mansoor0x · PS4 Exploit</title>
+<title>PulseHost 13.52 · Offline cache</title>
 <style>
 body {
     background-color: #ffffff;
@@ -27,12 +27,12 @@ history.go(-histlength);
 
 function DLProgress(e) {
     var pct = Math.round(e.loaded / e.total * 100);
-    msgs.innerHTML = "mansoor0x &middot; Installing ... " + pct + "%";
+    msgs.innerHTML = "PulseHost &middot; Installing cache ... " + pct + "%";
 }
 
 function DisplayCacheProgress() {
     setTimeout(function () {
-        msgs.innerHTML = "mansoor0x &middot; Cache OK";
+        msgs.innerHTML = "PulseHost &middot; Cache ready";
     }, 250);
     setTimeout(function () {
         location.reload();
